@@ -4,6 +4,10 @@
 !.env.example
 !.env.production
 
+# Local deployment scripts with API keys
+*-LOCAL.ps1
+*-LOCAL.sh
+
 # Python
 __pycache__/
 *.py[cod]
