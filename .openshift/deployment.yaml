@@ -29,11 +29,6 @@ items:
                     secretKeyRef:
                       name: api-secrets
                       key: azure-api-key
-                - name: AZURE_ENDPOINT
-                  valueFrom:
-                    secretKeyRef:
-                      name: api-secrets
-                      key: azure-endpoint
                 - name: OPENAI_API_KEY
                   valueFrom:
                     secretKeyRef:
@@ -109,7 +104,7 @@ items:
             - name: frontend
               image: image-registry.openshift-image-registry.svc:5000/gaik/report-frontend:latest
               ports:
-                - containerPort: 80
+                - containerPort: 8080
               resources:
                 limits:
                   memory: "256Mi"
@@ -120,13 +115,13 @@ items:
               livenessProbe:
                 httpGet:
                   path: /
-                  port: 80
+                  port: 8080
                 initialDelaySeconds: 10
                 periodSeconds: 10
               readinessProbe:
                 httpGet:
                   path: /
-                  port: 80
+                  port: 8080
                 initialDelaySeconds: 5
                 periodSeconds: 5
 
@@ -140,7 +135,7 @@ items:
     spec:
       ports:
         - port: 80
-          targetPort: 80
+          targetPort: 8080
       selector:
         app: report-writing-frontend
 
