@@ -39,6 +39,21 @@ items:
                     secretKeyRef:
                       name: api-secrets
                       key: openai-api-key
+                - name: ADMIN_USER
+                  valueFrom:
+                    secretKeyRef:
+                      name: api-secrets
+                      key: admin-user
+                - name: ADMIN_PASSWORD
+                  valueFrom:
+                    secretKeyRef:
+                      name: api-secrets
+                      key: admin-password
+                - name: JWT_SECRET
+                  valueFrom:
+                    secretKeyRef:
+                      name: api-secrets
+                      key: jwt-secret
               resources:
                 limits:
                   memory: "2Gi"
