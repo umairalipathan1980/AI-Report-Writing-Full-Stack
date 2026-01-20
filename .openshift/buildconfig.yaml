@@ -12,8 +12,8 @@ items:
       source:
         type: Git
         git:
-          uri: https://github.com/YOUR_USERNAME/YOUR_REPO.git
-          ref: main
+          uri: https://github.com/umairalipathan1980/AI-Report-Writing-Full-Stack.git
+          ref: master
         contextDir: fullstack-app/backend
       strategy:
         type: Docker
@@ -41,8 +41,8 @@ items:
       source:
         type: Git
         git:
-          uri: https://github.com/YOUR_USERNAME/YOUR_REPO.git
-          ref: main
+          uri: https://github.com/umairalipathan1980/AI-Report-Writing-Full-Stack.git
+          ref: master
         contextDir: fullstack-app/frontend
       strategy:
         type: Docker
@@ -82,4 +82,4 @@ items:
       name: github-webhook-secret
     type: Opaque
     stringData:
-      WebHookSecretKey: CHANGE_THIS_TO_RANDOM_STRING
+      WebHookSecretKey: 3f7f3c0445c1b409337036dada004964f6ce6e8b

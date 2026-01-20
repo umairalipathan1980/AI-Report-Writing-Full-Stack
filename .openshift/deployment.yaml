@@ -20,7 +20,7 @@ items:
         spec:
           containers:
             - name: backend
-              image: image-registry.openshift-image-registry.svc:5000/YOUR_PROJECT/report-backend:latest
+              image: image-registry.openshift-image-registry.svc:5000/project-name/report-backend:latest
               ports:
                 - containerPort: 8000
               env:
@@ -92,7 +92,7 @@ items:
         spec:
           containers:
             - name: frontend
-              image: image-registry.openshift-image-registry.svc:5000/YOUR_PROJECT/report-frontend:latest
+              image: image-registry.openshift-image-registry.svc:5000/project-name/report-frontend:latest
               ports:
                 - containerPort: 80
               resources:
