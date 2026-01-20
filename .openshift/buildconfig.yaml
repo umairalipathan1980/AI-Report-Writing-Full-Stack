@@ -1,0 +1,85 @@
+apiVersion: v1
+kind: List
+items:
+  # Backend BuildConfig
+  - apiVersion: build.openshift.io/v1
+    kind: BuildConfig
+    metadata:
+      name: report-backend
+      labels:
+        app: report-writing-backend
+    spec:
+      source:
+        type: Git
+        git:
+          uri: https://github.com/YOUR_USERNAME/YOUR_REPO.git
+          ref: main
+        contextDir: fullstack-app/backend
+      strategy:
+        type: Docker
+        dockerStrategy:
+          dockerfilePath: Dockerfile
+      output:
+        to:
+          kind: ImageStreamTag
+          name: report-backend:latest
+      triggers:
+        - type: ConfigChange
+        - type: GitHub
+          github:
+            secretReference:
+              name: github-webhook-secret
+
+  # Frontend BuildConfig
+  - apiVersion: build.openshift.io/v1
+    kind: BuildConfig
+    metadata:
+      name: report-frontend
+      labels:
+        app: report-writing-frontend
+    spec:
+      source:
+        type: Git
+        git:
+          uri: https://github.com/YOUR_USERNAME/YOUR_REPO.git
+          ref: main
+        contextDir: fullstack-app/frontend
+      strategy:
+        type: Docker
+        dockerStrategy:
+          dockerfilePath: Dockerfile
+      output:
+        to:
+          kind: ImageStreamTag
+          name: report-frontend:latest
+      triggers:
+        - type: ConfigChange
+        - type: GitHub
+          github:
+            secretReference:
+              name: github-webhook-secret
+
+  # Backend ImageStream
+  - apiVersion: image.openshift.io/v1
+    kind: ImageStream
+    metadata:
+      name: report-backend
+      labels:
+        app: report-writing-backend
+
+  # Frontend ImageStream
+  - apiVersion: image.openshift.io/v1
+    kind: ImageStream
+    metadata:
+      name: report-frontend
+      labels:
+        app: report-writing-frontend
+
+  # GitHub Webhook Secret
+  - apiVersion: v1
+    kind: Secret
+    metadata:
+      name: github-webhook-secret
+    type: Opaque
+    stringData:
+      WebHookSecretKey: CHANGE_THIS_TO_RANDOM_STRING

@@ -1,0 +1,147 @@
+apiVersion: v1
+kind: List
+items:
+  # Backend Deployment
+  - apiVersion: apps/v1
+    kind: Deployment
+    metadata:
+      name: report-backend
+      labels:
+        app: report-writing-backend
+    spec:
+      replicas: 1
+      selector:
+        matchLabels:
+          app: report-writing-backend
+      template:
+        metadata:
+          labels:
+            app: report-writing-backend
+        spec:
+          containers:
+            - name: backend
+              image: image-registry.openshift-image-registry.svc:5000/YOUR_PROJECT/report-backend:latest
+              ports:
+                - containerPort: 8000
+              env:
+                - name: AZURE_API_KEY
+                  valueFrom:
+                    secretKeyRef:
+                      name: api-secrets
+                      key: azure-api-key
+                - name: AZURE_ENDPOINT
+                  valueFrom:
+                    secretKeyRef:
+                      name: api-secrets
+                      key: azure-endpoint
+                - name: OPENAI_API_KEY
+                  valueFrom:
+                    secretKeyRef:
+                      name: api-secrets
+                      key: openai-api-key
+              resources:
+                limits:
+                  memory: "2Gi"
+                  cpu: "1000m"
+                requests:
+                  memory: "512Mi"
+                  cpu: "250m"
+              livenessProbe:
+                httpGet:
+                  path: /
+                  port: 8000
+                initialDelaySeconds: 30
+                periodSeconds: 10
+              readinessProbe:
+                httpGet:
+                  path: /
+                  port: 8000
+                initialDelaySeconds: 10
+                periodSeconds: 5
+
+  # Backend Service
+  - apiVersion: v1
+    kind: Service
+    metadata:
+      name: backend
+      labels:
+        app: report-writing-backend
+    spec:
+      ports:
+        - port: 8000
+          targetPort: 8000
+      selector:
+        app: report-writing-backend
+
+  # Frontend Deployment
+  - apiVersion: apps/v1
+    kind: Deployment
+    metadata:
+      name: report-frontend
+      labels:
+        app: report-writing-frontend
+    spec:
+      replicas: 1
+      selector:
+        matchLabels:
+          app: report-writing-frontend
+      template:
+        metadata:
+          labels:
+            app: report-writing-frontend
+        spec:
+          containers:
+            - name: frontend
+              image: image-registry.openshift-image-registry.svc:5000/YOUR_PROJECT/report-frontend:latest
+              ports:
+                - containerPort: 80
+              resources:
+                limits:
+                  memory: "256Mi"
+                  cpu: "200m"
+                requests:
+                  memory: "128Mi"
+                  cpu: "100m"
+              livenessProbe:
+                httpGet:
+                  path: /
+                  port: 80
+                initialDelaySeconds: 10
+                periodSeconds: 10
+              readinessProbe:
+                httpGet:
+                  path: /
+                  port: 80
+                initialDelaySeconds: 5
+                periodSeconds: 5
+
+  # Frontend Service
+  - apiVersion: v1
+    kind: Service
+    metadata:
+      name: frontend
+      labels:
+        app: report-writing-frontend
+    spec:
+      ports:
+        - port: 80
+          targetPort: 80
+      selector:
+        app: report-writing-frontend
+
+  # Route for Frontend (HTTPS)
+  - apiVersion: route.openshift.io/v1
+    kind: Route
+    metadata:
+      name: report-writing
+      labels:
+        app: report-writing-frontend
+    spec:
+      to:
+        kind: Service
+        name: frontend
+      port:
+        targetPort: 80
+      tls:
+        termination: edge
+        insecureEdgeTerminationPolicy: Redirect
