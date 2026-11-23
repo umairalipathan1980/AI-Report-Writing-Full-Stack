@@ -3,6 +3,7 @@ import json
 from typing import Dict, Any, Optional, List, Tuple
 from pydantic import BaseModel
 from openai import OpenAI, AzureOpenAI
+from app.core.config import is_reasoning_model
 
 
 class RevisionResult(BaseModel):
@@ -410,9 +411,10 @@ def _call_revision_llm(prompt: str, api_config: Dict[str, Any]) -> str:
     else:
         client = OpenAI(api_key=api_config.get('api_key'))
     
-    model = api_config.get('model')
+    model = api_config.get('revision_model') or api_config.get('model')
+    print(f"Reviser model: {model}")
 
-    if model.startswith("gpt-5"):
+    if is_reasoning_model(model):
         # reasoning-enabled model: include reasoning params
         response = client.chat.completions.create(
             model = model,

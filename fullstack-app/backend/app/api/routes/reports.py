@@ -33,7 +33,10 @@ class TranscriptReportRequest(BaseModel):
     meeting_notes: Optional[str] = ""
     additional_instructions: Optional[str] = ""
     use_azure: bool = True
-    selected_model: str = "gpt-5.1"
+    writer_model: Optional[str] = None
+    reviewer_model: Optional[str] = None
+    reviser_model: Optional[str] = None
+    selected_model: Optional[str] = None  # legacy alias for writer_model
     verification_rounds: int = 5
     use_langgraph: bool = True
 
@@ -54,7 +57,10 @@ async def report_from_recording(
     meeting_notes: str = Form(""),
     additional_instructions: str = Form(""),
     use_azure: bool = Form(True),
-    selected_model: str = Form("gpt-5.1"),
+    writer_model: Optional[str] = Form(None),
+    reviewer_model: Optional[str] = Form(None),
+    reviser_model: Optional[str] = Form(None),
+    selected_model: Optional[str] = Form(None),
     verification_rounds: int = Form(5),
     compress_audio: bool = Form(True),
     use_langgraph: bool = Form(True),
@@ -72,7 +78,9 @@ async def report_from_recording(
         meeting_notes=meeting_notes,
         additional_instructions=additional_instructions,
         use_azure=use_azure,
-        selected_model=selected_model,
+        writer_model=writer_model or selected_model,
+        reviewer_model=reviewer_model,
+        reviser_model=reviser_model,
         verification_rounds=verification_rounds,
         compress_audio=compress_audio,
         use_langgraph=use_langgraph,

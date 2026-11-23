@@ -12,6 +12,30 @@ import tempfile
 from datetime import datetime
 import time
 
+MAX_TRANSCRIPTION_FILE_SIZE_MB = 25
+MAX_TRANSCRIPTION_DURATION_SECONDS = 1500
+
+
+def should_chunk_audio(
+    file_size_mb,
+    duration_seconds,
+    max_size_mb=MAX_TRANSCRIPTION_FILE_SIZE_MB,
+    max_duration_seconds=MAX_TRANSCRIPTION_DURATION_SECONDS,
+):
+    return file_size_mb > max_size_mb or duration_seconds > max_duration_seconds
+
+
+def calculate_audio_chunk_count(
+    file_size_mb,
+    duration_seconds,
+    max_size_mb=MAX_TRANSCRIPTION_FILE_SIZE_MB,
+    max_duration_seconds=MAX_TRANSCRIPTION_DURATION_SECONDS,
+):
+    chunks_by_size = max(1, math.ceil(file_size_mb / (max_size_mb * 0.9)))
+    chunks_by_duration = max(1, math.ceil(duration_seconds / (max_duration_seconds * 0.95)))
+    return max(chunks_by_size, chunks_by_duration), chunks_by_size, chunks_by_duration
+
+
 def process_audio_transcription(file_path, output_dir, api_config, compress_audio=True):
     """
     Transcribe an audio or video file using OpenAI API or Azure OpenAI API
@@ -179,18 +203,22 @@ def process_audio_transcription(file_path, output_dir, api_config, compress_audi
     duration_seconds = len(audio) / 1000  # pydub uses milliseconds
     duration_hours = duration_seconds / 3600  # Convert to hours
     # Determine if chunking is needed based on file size and duration
-    max_size_mb = 25  # 25MB chunk size
-    max_duration_seconds = 1500  # 25 minutes (1500 seconds)
+    max_size_mb = MAX_TRANSCRIPTION_FILE_SIZE_MB
+    max_duration_seconds = MAX_TRANSCRIPTION_DURATION_SECONDS
     
-    needs_chunking = (file_size_mb > max_size_mb) # chunking is needed if the file size is greater than 25MB
-    
+    needs_chunking = should_chunk_audio(file_size_mb, duration_seconds, max_size_mb, max_duration_seconds)
     try:
         # Handle transcript generation with or without chunking
         if needs_chunking and audio is not None:
+            print(
+                f"Chunking audio before transcription: "
+                f"{file_size_mb:.2f}MB, {duration_seconds:.2f}s "
+                f"(limits: {max_size_mb}MB, {max_duration_seconds}s)"
+            )
             # Split and transcribe in chunks with context preservation
             raw_transcript = split_and_transcribe_with_context(audio_path, api_config, max_size_mb, max_duration_seconds, audio)
         else:
-            print("Transcribing the whole audio file in one shot (file size <25MB)...")
+            print("Transcribing the whole audio file in one shot (within size and duration limits)...")
             
             # Transcribe directly based on API selection
             if use_azure:
@@ -489,12 +517,17 @@ def split_and_transcribe_with_context(audio_path, api_config, max_size_mb=25, ma
     # Calculate the number of chunks needed based on both size and duration
     file_size_mb = os.path.getsize(audio_path) / (1024 * 1024)
     
-    chunks_by_size = math.ceil(file_size_mb / (max_size_mb * 0.9))  # Use 90% of max to be safe
-    chunks_by_duration = math.ceil(duration_seconds / (max_duration_seconds * 0.95))  # Use 95% of max to be safe
-    # num_chunks = max(chunks_by_size, chunks_by_duration)
-    num_chunks = chunks_by_size
+    num_chunks, chunks_by_size, chunks_by_duration = calculate_audio_chunk_count(
+        file_size_mb,
+        duration_seconds,
+        max_size_mb,
+        max_duration_seconds,
+    )
     
-    print(f"Splitting audio into {num_chunks} chunks based on size ({chunks_by_size})")
+    print(
+        f"Splitting audio into {num_chunks} chunks "
+        f"(size requires {chunks_by_size}, duration requires {chunks_by_duration})"
+    )
     
     # Calculate chunk duration in milliseconds
     chunk_length_ms = len(audio) // num_chunks

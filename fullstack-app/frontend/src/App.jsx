@@ -17,6 +17,24 @@ import { Textarea } from './components/ui/textarea'
 
 const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:8000'
 
+const MODEL_OPTIONS = ['gpt-4.1', 'gpt-5.1', 'gpt-5.2', 'gpt-5.4', 'gpt-5.5', 'gpt-6-luna', 'gpt-6.1-sol']
+const DEFAULT_MODELS = { writer: 'gpt-6-luna', reviewer: 'gpt-6.1-sol', reviser: 'gpt-6-luna' }
+
+// Return the saved token only if it is still unexpired; otherwise clear it so
+// the sign-in screen is shown instead of a form whose requests would all 401.
+function loadStoredToken() {
+  const token = localStorage.getItem('authToken') || ''
+  if (!token) return ''
+  try {
+    const payload = JSON.parse(atob(token.split('.')[1].replace(/-/g, '+').replace(/_/g, '/')))
+    if (payload.exp && payload.exp * 1000 > Date.now()) return token
+  } catch {
+    // malformed token: fall through and discard it
+  }
+  localStorage.removeItem('authToken')
+  return ''
+}
+
 function App() {
   const [mode, setMode] = useState('recording')
   const [recordingFile, setRecordingFile] = useState(null)
@@ -35,7 +53,9 @@ function App() {
     consultation_type: 'Regular'
   })
   const [useAzure, setUseAzure] = useState(true)
-  const [selectedModel, setSelectedModel] = useState('gpt-5.1')
+  const [writerModel, setWriterModel] = useState(DEFAULT_MODELS.writer)
+  const [reviewerModel, setReviewerModel] = useState(DEFAULT_MODELS.reviewer)
+  const [reviserModel, setReviserModel] = useState(DEFAULT_MODELS.reviser)
   const [verificationRounds, setVerificationRounds] = useState(5)
   const [useLanggraph, setUseLanggraph] = useState(true)
   const [compressAudio, setCompressAudio] = useState(true)
@@ -47,7 +67,7 @@ function App() {
   const [authUser, setAuthUser] = useState('')
   const [authPassword, setAuthPassword] = useState('')
   const [authShowPassword, setAuthShowPassword] = useState(false)
-  const [authToken, setAuthToken] = useState(localStorage.getItem('authToken') || '')
+  const [authToken, setAuthToken] = useState(loadStoredToken)
 
   const missingFields = useMemo(() => {
     const required = [
@@ -109,7 +129,9 @@ function App() {
       consultation_type: 'Regular'
     })
     setUseAzure(true)
-    setSelectedModel('gpt-5.1')
+    setWriterModel(DEFAULT_MODELS.writer)
+    setReviewerModel(DEFAULT_MODELS.reviewer)
+    setReviserModel(DEFAULT_MODELS.reviser)
     setVerificationRounds(5)
     setUseLanggraph(true)
     setCompressAudio(true)
@@ -150,7 +172,9 @@ function App() {
           meeting_notes: meetingNotes,
           additional_instructions: additionalInstructions,
           use_azure: useAzure,
-          selected_model: selectedModel,
+          writer_model: writerModel,
+          reviewer_model: reviewerModel,
+          reviser_model: reviserModel,
           verification_rounds: Number(verificationRounds),
           use_langgraph: useLanggraph
         })
@@ -163,7 +187,9 @@ function App() {
         formData.append('meeting_notes', meetingNotes)
         formData.append('additional_instructions', additionalInstructions)
         formData.append('use_azure', String(useAzure))
-        formData.append('selected_model', selectedModel)
+        formData.append('writer_model', writerModel)
+        formData.append('reviewer_model', reviewerModel)
+        formData.append('reviser_model', reviserModel)
         formData.append('verification_rounds', String(verificationRounds))
         formData.append('compress_audio', String(compressAudio))
         formData.append('use_langgraph', String(useLanggraph))
@@ -173,7 +199,13 @@ function App() {
         setResults(response.data.results)
       }
     } catch (err) {
-      setError(err.response?.data?.detail || err.message)
+      if (err.response?.status === 401) {
+        // Saved token was rejected (expired, or the server's JWT_SECRET changed).
+        handleLogout()
+        setError('Your session has expired. Please sign in again.')
+      } else {
+        setError(err.response?.data?.detail || err.message)
+      }
     } finally {
       setLoading(false)
     }
@@ -378,18 +410,24 @@ function App() {
                         onChange={(event) => setVerificationRounds(event.target.value)}
                       />
                     </div>
-                    <div className="space-y-2 md:col-span-2">
-                      <label className="text-sm font-medium text-slate-700">Model selection</label>
-                      <select
-                        value={selectedModel}
-                        onChange={(event) => setSelectedModel(event.target.value)}
-                        className="h-11 w-full rounded-md border border-slate-200 bg-white px-3 text-sm text-slate-700"
-                      >
-                        <option value="gpt-4.1">gpt-4.1</option>
-                        <option value="gpt-5.1">gpt-5.1</option>
-                        <option value="gpt-5.2">gpt-5.2</option>
-                      </select>
-                    </div>
+                    {[
+                      { label: 'Writer model', value: writerModel, setter: setWriterModel },
+                      { label: 'Reviewer model', value: reviewerModel, setter: setReviewerModel },
+                      { label: 'Reviser model', value: reviserModel, setter: setReviserModel }
+                    ].map(({ label, value, setter }) => (
+                      <div key={label} className="space-y-2">
+                        <label className="text-sm font-medium text-slate-700">{label}</label>
+                        <select
+                          value={value}
+                          onChange={(event) => setter(event.target.value)}
+                          className="h-11 w-full rounded-md border border-slate-200 bg-white px-3 text-sm text-slate-700"
+                        >
+                          {MODEL_OPTIONS.map((model) => (
+                            <option key={model} value={model}>{model}</option>
+                          ))}
+                        </select>
+                      </div>
+                    ))}
                   </div>
                 </div>
               </details>

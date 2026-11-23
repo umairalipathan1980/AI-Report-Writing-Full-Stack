@@ -4,6 +4,7 @@ from typing import Dict, Any, Optional, List, Tuple, Union
 from pydantic import BaseModel
 from openai import OpenAI, AzureOpenAI
 from dataclasses import dataclass, field
+from app.core.config import is_reasoning_model
 
 
 class VerificationIssue(BaseModel):
@@ -1346,9 +1347,10 @@ def _verify_report_with_context(prompt: str, api_config: Dict[str, Any],
         else:
             client = OpenAI(api_key=api_config.get('api_key'))
         
-        model = api_config.get('model')
+        model = api_config.get('review_model') or api_config.get('model')
+        print(f"Reviewer model: {model}")
 
-        if model.startswith("gpt-5"):
+        if is_reasoning_model(model):
             # reasoning-enabled model: include reasoning params
             response = client.chat.completions.create(
                 model = model,

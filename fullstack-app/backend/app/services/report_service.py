@@ -1,7 +1,7 @@
 import json
 import tempfile
 from pathlib import Path
-from typing import Any, Dict
+from typing import Any, Dict, Optional
 
 from fastapi import HTTPException, UploadFile
 
@@ -15,7 +15,12 @@ def create_report_from_transcript(payload: Dict[str, Any]) -> Dict[str, Any]:
     if not transcript:
         raise HTTPException(status_code=400, detail="Transcript cannot be empty")
 
-    api_config = build_api_config(payload.get("use_azure", True), payload.get("selected_model", "gpt-5.1"))
+    api_config = build_api_config(
+        payload.get("use_azure", True),
+        writer_model=payload.get("writer_model") or payload.get("selected_model"),
+        reviewer_model=payload.get("reviewer_model"),
+        reviser_model=payload.get("reviser_model"),
+    )
     try:
         validate_api_keys(api_config)
     except ValueError as exc:
@@ -51,12 +56,14 @@ def create_report_from_recording(
     meeting_notes: str,
     additional_instructions: str,
     use_azure: bool,
-    selected_model: str,
+    writer_model: Optional[str],
+    reviewer_model: Optional[str],
+    reviser_model: Optional[str],
     verification_rounds: int,
     compress_audio: bool,
     use_langgraph: bool,
 ) -> Dict[str, Any]:
-    api_config = build_api_config(use_azure, selected_model)
+    api_config = build_api_config(use_azure, writer_model, reviewer_model, reviser_model)
     try:
         validate_api_keys(api_config)
     except ValueError as exc:

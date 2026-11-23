@@ -3,6 +3,7 @@ import re
 from typing import Dict, Any
 from pydantic import BaseModel
 from openai import OpenAI, AzureOpenAI
+from app.core.config import is_reasoning_model
 
 
 class ReportResult(BaseModel):
@@ -128,7 +129,7 @@ def generate_report_content(transcript: str, company_data: Dict[str, Any],
     if additional_instructions:
         full_context += "\n\n ADDITIONAL INSTRUCTIONS:\n\n" + additional_instructions
 
-    if api_config.get('model','gpt-5.1').startswith("gpt-5"):
+    if is_reasoning_model(api_config.get('model', '')):
         full_context += "\n\n ADDITIONAL INSTRUCTIONS: \n\n" + """
         - Unless you are generating "Recommendation" section, do not create bulleted points and/or sub-sections in other sections. Avoid including unnecessary or overlapping details in the sections. Keep them concise, while covering all important details.
         - **VERY IMPORTANT:** If you are generating "Recommendation" section, strictly follow the format of the recommendations as given in the sample report. Create just one level of bullet points. DO NOT create any sub-points or sub-sections. 
@@ -455,7 +456,7 @@ def _call_llm(prompt: str, api_config: Dict[str, Any], max_tokens: int = 16000, 
         client = OpenAI(api_key=api_config.get('api_key'))
     
     model = api_config.get('model')
-    if model.startswith("gpt-5"):
+    if is_reasoning_model(model):
         # reasoning-enabled model: include reasoning params
         response = client.chat.completions.create(
             model = model,
